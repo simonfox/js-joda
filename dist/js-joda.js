@@ -12,7 +12,7 @@
 		exports["JSJoda"] = factory();
 	else
 		root["JSJoda"] = factory();
-})(this, function() {
+})(typeof self !== 'undefined' ? self : this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -343,6 +343,48 @@ var MathUtil = exports.MathUtil = function () {
             return 1;
         }
         return 0;
+    };
+
+    MathUtil.smi = function smi(int) {
+        return int >>> 1 & 0x40000000 | int & 0xBFFFFFFF;
+    };
+
+    MathUtil.hash = function hash(number) {
+        if (number !== number || number === Infinity) {
+            return 0;
+        }
+        var result = number;
+        while (number > 0xFFFFFFFF) {
+            number /= 0xFFFFFFFF;
+            result ^= number;
+        }
+        return MathUtil.smi(result);
+    };
+
+    MathUtil.hashCode = function hashCode() {
+        var result = 17;
+
+        for (var _len = arguments.length, numbers = Array(_len), _key = 0; _key < _len; _key++) {
+            numbers[_key] = arguments[_key];
+        }
+
+        for (var _iterator = numbers, _isArray = Array.isArray(_iterator), _i = 0, _iterator = _isArray ? _iterator : _iterator[Symbol.iterator]();;) {
+            var _ref;
+
+            if (_isArray) {
+                if (_i >= _iterator.length) break;
+                _ref = _iterator[_i++];
+            } else {
+                _i = _iterator.next();
+                if (_i.done) break;
+                _ref = _i.value;
+            }
+
+            var n = _ref;
+
+            result = (result << 5) - result + MathUtil.hash(n);
+        }
+        return MathUtil.hash(result);
     };
 
     return MathUtil;
@@ -1422,7 +1464,7 @@ var LocalDate = function (_ChronoLocalDate) {
         var yearValue = this._year;
         var monthValue = this._month;
         var dayValue = this._day;
-        return yearValue & 0xFFFFF800 ^ (yearValue << 11) + (monthValue << 6) + dayValue;
+        return _MathUtil.MathUtil.hash(yearValue & 0xFFFFF800 ^ (yearValue << 11) + (monthValue << 6) + dayValue);
     };
 
     LocalDate.prototype.toString = function toString() {
@@ -2967,7 +3009,7 @@ var LocalTime = function (_Temporal) {
 
     LocalTime.prototype.hashCode = function hashCode() {
         var nod = this.toNanoOfDay();
-        return nod ^ nod >>> 24;
+        return _MathUtil.MathUtil.hash(nod);
     };
 
     LocalTime.prototype.toString = function toString() {
@@ -3469,7 +3511,7 @@ var Instant = function (_Temporal) {
     };
 
     Instant.prototype.hashCode = function hashCode() {
-        return (this._seconds ^ this._seconds >>> 24) + 51 * this._nanos;
+        return _MathUtil.MathUtil.hashCode(this._seconds, this._nanos);
     };
 
     Instant.prototype.toString = function toString() {
@@ -6111,8 +6153,7 @@ var ValueRange = exports.ValueRange = function () {
     };
 
     ValueRange.prototype.hashCode = function hashCode() {
-        var hash = this._minSmallest + this._minLargest << 16 + this._minLargest >> 48 + this._maxSmallest << 32 + this._maxSmallest >> 32 + this._maxLargest << 48 + this._maxLargest >> 16;
-        return hash ^ hash >>> 32;
+        return _MathUtil.MathUtil.hashCode(this._minSmallest, this._minLargest, this._maxSmallest, this._maxLargest);
     };
 
     ValueRange.prototype.toString = function toString() {
@@ -7286,7 +7327,7 @@ var Period = exports.Period = function (_TemporalAmount) {
     };
 
     Period.prototype.hashCode = function hashCode() {
-        return this._years + (this._months << 8) + (this._days << 16);
+        return _MathUtil.MathUtil.hashCode(this._years, this._months, this._days);
     };
 
     Period.prototype.toString = function toString() {
@@ -7341,6 +7382,8 @@ exports._init = _init;
 var _assert = __webpack_require__(0);
 
 var _errors = __webpack_require__(1);
+
+var _MathUtil = __webpack_require__(2);
 
 var _Clock = __webpack_require__(15);
 
@@ -7914,11 +7957,7 @@ var ZonedDateTime = function (_ChronoZonedDateTime) {
     };
 
     ZonedDateTime.prototype.hashCode = function hashCode() {
-        var r = 17;
-        r = 31 * r + this._dateTime.hashCode();
-        r = 31 * r + this._offset.hashCode();
-        r = 31 * r + this._zone.hashCode();
-        return r;
+        return _MathUtil.MathUtil.hashCode(this._dateTime.hashCode(), this._offset.hashCode(), this._zone.hashCode());
     };
 
     ZonedDateTime.prototype.toString = function toString() {
@@ -8069,38 +8108,40 @@ var ZoneRulesProvider = exports.ZoneRulesProvider = function () {
 
 
 exports.__esModule = true;
+exports.StringUtil = undefined;
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+var _MathUtil = __webpack_require__(2);
 
-/*
- * @copyright (c) 2016, Philipp Thürwächter & Pattrick Hüper
- * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
- */
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } /*
+                                                                                                                                                           * @copyright (c) 2016, Philipp Thürwächter & Pattrick Hüper
+                                                                                                                                                           * @license BSD-3-Clause (see LICENSE in the root directory of this source tree)
+                                                                                                                                                           */
 
 var StringUtil = exports.StringUtil = function () {
-  function StringUtil() {
-    _classCallCheck(this, StringUtil);
-  }
-
-  StringUtil.startsWith = function startsWith(text, pattern) {
-    return text.indexOf(pattern) === 0;
-  };
-
-  StringUtil.hashCode = function hashCode(text) {
-    var hash = 0,
-        i = void 0,
-        chr = void 0,
-        len = void 0;
-    if (text.length === 0) return hash;
-    for (i = 0, len = text.length; i < len; i++) {
-      chr = text.charCodeAt(i);
-      hash = (hash << 5) - hash + chr;
-      hash |= 0;
+    function StringUtil() {
+        _classCallCheck(this, StringUtil);
     }
-    return hash;
-  };
 
-  return StringUtil;
+    StringUtil.startsWith = function startsWith(text, pattern) {
+        return text.indexOf(pattern) === 0;
+    };
+
+    StringUtil.hashCode = function hashCode(text) {
+        var len = text.length;
+        if (len === 0) {
+            return 0;
+        }
+
+        var hash = 0;
+        for (var i = 0; i < len; i++) {
+            var chr = text.charCodeAt(i);
+            hash = (hash << 5) - hash + chr;
+            hash |= 0;
+        }
+        return _MathUtil.MathUtil.smi(hash);
+    };
+
+    return StringUtil;
 }();
 
 /***/ }),
@@ -8262,7 +8303,7 @@ var Fixed = function (_ZoneRules) {
         return false;
     };
 
-    Fixed.prototype.isValidOffset = function isValidOffset(dateTime, offset) {
+    Fixed.prototype.isValidOffset = function isValidOffset(localDateTime, offset) {
         return this._offset.equals(offset);
     };
 
